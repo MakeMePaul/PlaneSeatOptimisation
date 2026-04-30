@@ -3,8 +3,21 @@
 AeroBoard ist eine GitHub-Pages-kompatible Websimulation fuer Flugzeug-Boarding (Top-Down-Ansicht, 30 Reihen).  
 Das Projekt ist modular aufgebaut, damit spaeter Python-Optimierung, Familienlogik, Seat-Interference und echte Cluster-Verfahren ergaenzt werden koennen.
 
+## Live-Demo
+
+Im Browser ohne Installation: **[AeroBoard auf GitHub Pages](https://makemepaul.github.io/PlaneSeatOptimisation/)**
+
+### Kurzvideo der Simulation
+
+Die Datei `docs/simulation-demo.mp4` zeigt die Boarding-Simulation in Aktion (lokal im Repo; auf GitHub im README eingebettet).
+
+<video src="docs/simulation-demo.mp4" controls playsinline width="800"></video>
+
+**Optional als GIF:** Aus dem MP4 z. B. mit [ScreenToGif](https://www.screentogif.com/) oder `ffmpeg` ein GIF erzeugen, als `docs/simulation-demo.gif` ablegen und im README z. B. `![AeroBoard](docs/simulation-demo.gif)` verwenden.
+
 ## Projektstruktur
 
+- `docs/` Medien (z. B. Demo-Video `simulation-demo.mp4`)
 - `index.html` UI-Struktur und Controls
 - `style.css` Layout und Darstellung
 - `app.js` Kernlogik (Passenger, Plane, Simulation, Rendering, UI-Events)
