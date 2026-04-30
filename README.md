@@ -7,17 +7,15 @@ Das Projekt ist modular aufgebaut, damit spaeter Python-Optimierung, Familienlog
 
 Im Browser ohne Installation: **[AeroBoard auf GitHub Pages](https://makemepaul.github.io/PlaneSeatOptimisation/)**
 
-### Kurzvideo der Simulation
+### Simulation (GIF)
 
-Die Datei `docs/simulation-demo.mp4` zeigt die Boarding-Simulation in Aktion (lokal im Repo; auf GitHub im README eingebettet).
+[![AeroBoard Boarding-Simulation](docs/simulation-demo.gif)](https://makemepaul.github.io/PlaneSeatOptimisation/)
 
-<video src="docs/simulation-demo.mp4" controls playsinline width="800"></video>
-
-**Optional als GIF:** Aus dem MP4 z. B. mit [ScreenToGif](https://www.screentogif.com/) oder `ffmpeg` ein GIF erzeugen, als `docs/simulation-demo.gif` ablegen und im README z. B. `![AeroBoard](docs/simulation-demo.gif)` verwenden.
+Die Animation liegt als `docs/simulation-demo.gif` im Repository (Klick auf das Bild oeffnet die Live-Demo).
 
 ## Projektstruktur
 
-- `docs/` Medien (z. B. Demo-Video `simulation-demo.mp4`)
+- `docs/` Medien (z. B. Demo-Animation `simulation-demo.gif`)
 - `index.html` UI-Struktur und Controls
 - `style.css` Layout und Darstellung
 - `app.js` Kernlogik (Passenger, Plane, Simulation, Rendering, UI-Events)
