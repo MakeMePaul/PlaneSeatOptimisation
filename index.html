@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AeroBoard Simulation</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="layout">
+    <section class="panel controls">
+      <h1>AeroBoard</h1>
+      <p class="subtitle">Flugzeug-Boarding-Simulation (Top-Down)</p>
+
+      <div class="controls-grid">
+        <div class="control-field">
+          <label for="algorithmSelect">Boarding-Algorithmus</label>
+          <select id="algorithmSelect">
+            <option value="random">Random</option>
+            <option value="backToFront">Back-to-Front</option>
+            <option value="windowMiddleAisle">Window-Middle-Aisle</option>
+            <option value="prototypeCluster">Prototype Cluster</option>
+          </select>
+        </div>
+
+        <div class="control-field">
+          <label for="passengerCountInput">Anzahl Passagiere</label>
+          <input id="passengerCountInput" type="number" min="1" max="180" value="60">
+        </div>
+
+        <div class="control-field">
+          <label for="speedInput">Tick-Intervall (ms)</label>
+          <input id="speedInput" type="number" min="10" max="5000" step="10" value="350">
+        </div>
+
+        <div class="control-field control-field-checkbox">
+          <label for="enableProfilesCheckbox" class="checkbox-label">
+            <input type="checkbox" id="enableProfilesCheckbox" checked>
+            <span>Passagierprofile aktivieren</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="button-row">
+        <button id="startButton">Start</button>
+        <button id="pauseButton">Pause</button>
+        <button id="tickButton">Ein Tick</button>
+        <button id="resetButton">Reset</button>
+      </div>
+
+      <div class="stats">
+        <p><strong>Tick:</strong> <span id="tickStat">0</span></p>
+        <p><strong>Wartend:</strong> <span id="waitingStat">0</span></p>
+        <p><strong>Im Gang:</strong> <span id="aisleStat">0</span></p>
+        <p><strong>Sitzend:</strong> <span id="seatedStat">0</span></p>
+        <p><strong>Aktiver Algorithmus:</strong> <span id="algorithmStat">-</span></p>
+      </div>
+    </section>
+
+    <section class="panel canvas-panel">
+      <div class="legend">
+        <span class="legend-dot waiting"></span> Wartend
+        <span class="legend-dot walking"></span> Walking
+        <span class="legend-dot stowing"></span> Stowing
+        <span class="legend-dot seating"></span> Seating
+        <span class="legend-dot seated"></span> Seated
+      </div>
+      <p class="legend-note">Fuellfarbe = Cluster/Algorithmus, Randfarbe = Status.</p>
+      <canvas id="planeCanvas" width="1100" height="900" aria-label="Flugzeugansicht"></canvas>
+    </section>
+  </main>
+
+  <script src="algorithms.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
