@@ -1,0 +1,36 @@
+<main class="layout">
+  <section class="panel controls">
+    <select id="algorithmSelect"></select>
+    <div id="normalAlgorithmsList"></div>
+    <div id="optimizedAlgorithmsList"></div>
+    <input id="passengerCountInput" type="number" value="60" />
+    <input id="speedInput" type="number" value="350" />
+    <input id="seedInput" type="text" value="12345" />
+    <button type="button" id="newSeedButton">Neuer Seed</button>
+    <span id="activeSeedDisplay">12345</span>
+    <input type="checkbox" id="enableProfilesCheckbox" checked />
+    <input type="checkbox" id="benchmarkModeCheckbox" />
+    <p id="profilesStatus">Profile aktiv</p>
+    <button id="startButton">Start</button>
+    <button id="pauseButton">Pause</button>
+    <button id="tickButton">Tick</button>
+    <button id="resetButton">Reset</button>
+    <span id="tickStat" data-live-stat="tick">0</span>
+    <span id="waitingStat" data-live-stat="waiting">0</span>
+    <span id="aisleStat" data-live-stat="aisle">0</span>
+    <span id="seatedStat" data-live-stat="seated">0</span>
+    <span id="algorithmStat" data-live-stat="algorithm">-</span>
+    <div id="comparisonNormalList"></div>
+    <div id="comparisonOptimizedList"></div>
+    <input id="batchRunCountInput" type="number" value="20" />
+    <button id="comparisonStartButton">Vergleich starten</button>
+    <button id="comparisonResetButton">Vergleich zuruecksetzen</button>
+    <button id="batchComparisonStartButton">Batch</button>
+    <button id="batchComparisonCancelButton" type="button">Abbrechen</button>
+    <button id="batchExportCsvButton" type="button">CSV</button>
+    <p id="batchComparisonProgress">—</p>
+  </section>
+  <canvas id="planeCanvas" width="400" height="300"></canvas>
+  <table><tbody id="comparisonTableBody"><tr><td></td></tr></tbody></table>
+  <table><tbody id="batchComparisonTableBody"><tr><td></td></tr></tbody></table>
+</main>

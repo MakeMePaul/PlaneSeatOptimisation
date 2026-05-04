@@ -6,10 +6,13 @@
   const BOUNDED_MAX_BRANCHING_CANDIDATES = 10;
   const BOUNDED_MAX_OPEN_SET_SIZE = 300;
 
-  function randomOrder(items) {
+  function randomOrder(items, rng) {
+    if (!rng || typeof rng.next !== "function") {
+      throw new Error("randomOrder requires rng.next()");
+    }
     const copy = items.slice();
     for (let i = copy.length - 1; i > 0; i -= 1) {
-      const j = Math.floor(Math.random() * (i + 1));
+      const j = Math.floor(rng.next() * (i + 1));
       const tmp = copy[i];
       copy[i] = copy[j];
       copy[j] = tmp;
@@ -96,8 +99,12 @@
     return stablePassengerId(a) - stablePassengerId(b);
   }
 
-  function backToFront(passengers) {
-    const groups = randomOrder(groupPassengersForBoarding(passengers));
+  function backToFront(passengers, options) {
+    const rng = options && options.rng;
+    if (!rng || typeof rng.next !== "function") {
+      throw new Error("backToFront requires options.rng");
+    }
+    const groups = randomOrder(groupPassengersForBoarding(passengers), rng);
     groups.sort((a, b) => b.maxTargetRow - a.maxTargetRow);
     return flattenGroupedPassengers(groups);
   }
@@ -306,24 +313,41 @@
     return flattenGroupedPassengers(groups);
   }
 
+  function prototypeClusterBandFromRow(row) {
+    if (row <= 8) return "cluster_1";
+    if (row <= 16) return "cluster_2";
+    if (row <= 24) return "cluster_3";
+    return "cluster_4";
+  }
+
   function prototypeCluster(passengers) {
     // Lower numeric priority boards first: rear clusters (cluster_4) before front (cluster_1).
+    // Bands from target row (same thresholds as clusterIdForAlgorithm); groups use maxTargetRow.
     const clusterPriority = {
       cluster_1: 4,
       cluster_2: 3,
       cluster_3: 2,
       cluster_4: 1,
     };
-    const groups = randomOrder(groupPassengersForBoarding(passengers));
+    const groups = groupPassengersForBoarding(passengers);
     groups.sort((a, b) => {
-      const sampleA = a.passengers[0];
-      const sampleB = b.passengers[0];
-      const priorityA = clusterPriority[sampleA.clusterId] || Number.MAX_SAFE_INTEGER;
-      const priorityB = clusterPriority[sampleB.clusterId] || Number.MAX_SAFE_INTEGER;
+      const bandA = prototypeClusterBandFromRow(a.maxTargetRow);
+      const bandB = prototypeClusterBandFromRow(b.maxTargetRow);
+      const priorityA = clusterPriority[bandA] || Number.MAX_SAFE_INTEGER;
+      const priorityB = clusterPriority[bandB] || Number.MAX_SAFE_INTEGER;
       if (priorityA !== priorityB) {
         return priorityA - priorityB;
       }
-      return b.maxTargetRow - a.maxTargetRow;
+      const rowDiff = b.maxTargetRow - a.maxTargetRow;
+      if (rowDiff !== 0) {
+        return rowDiff;
+      }
+      const idA = minPassengerIdInGroup(a);
+      const idB = minPassengerIdInGroup(b);
+      if (idA !== idB) {
+        return idA - idB;
+      }
+      return stableGroupCompare(a, b);
     });
     return flattenGroupedPassengers(groups);
   }
@@ -478,7 +502,15 @@
       : 0;
     const conflictPenalty = estimateBoardingConflictCost(lastPassenger, nextPassenger, positionIndex);
 
-    return rearPenalty + frontTooEarlyPenalty + seatTypePenalty + stowPenalty + riskPenalty + rowSwitchPenalty + conflictPenalty;
+    return (
+      rearPenalty +
+      frontTooEarlyPenalty +
+      seatTypePenalty +
+      stowPenalty +
+      riskPenalty +
+      rowSwitchPenalty +
+      conflictPenalty
+    );
   }
 
   function estimateRemainingCost(remainingIds, passengersById, positionIndex) {
@@ -508,7 +540,7 @@
     if (passengers.length > MAX_EXACT_ASTAR_PASSENGERS) {
       console.warn(
         `Exact A* supports at most ${MAX_EXACT_ASTAR_PASSENGERS} passengers. ` +
-          `Received ${passengers.length}. Falling back to Bounded A*.`
+          `Received ${passengers.length}. Falling back to Bounded A* (cost model).`
       );
       return boundedAStar(passengers);
     }
@@ -752,9 +784,17 @@
       .filter(Boolean);
   }
 
-  function tickSearch(passengers) {
+  function tickSearch(passengers, options) {
+    const rng = options && options.rng;
+    const blueprintSeed = options && options.blueprintSeed;
     if (typeof window !== "undefined" && typeof window.__aeroBoardRunTickSearch === "function") {
-      return window.__aeroBoardRunTickSearch(passengers);
+      if (!rng || typeof rng.next !== "function") {
+        throw new Error("tickSearch requires options.rng");
+      }
+      if (blueprintSeed === undefined || blueprintSeed === null) {
+        throw new Error("tickSearch requires options.blueprintSeed");
+      }
+      return window.__aeroBoardRunTickSearch(passengers, rng, blueprintSeed >>> 0);
     }
     return boundedAStar(passengers);
   }
@@ -798,41 +838,88 @@
     return ordered;
   }
 
-  function random(passengers) {
-    const groups = randomOrder(groupPassengersForBoarding(passengers));
+  function random(passengers, options) {
+    const rng = options && options.rng;
+    if (!rng || typeof rng.next !== "function") {
+      throw new Error("random boarding requires options.rng");
+    }
+    const groups = randomOrder(groupPassengersForBoarding(passengers), rng);
     return flattenGroupedPassengers(groups);
   }
 
   window.groupPassengersForBoarding = groupPassengersForBoarding;
   window.BoardingAlgorithms = {
-    random: { key: "random", label: "Random", type: "normal", run: random },
-    backToFront: { key: "backToFront", label: "Back-to-Front", type: "normal", run: backToFront },
+    random: {
+      key: "random",
+      label: "Random",
+      type: "normal",
+      /** Eingangsreihenfolge irrelevant; Warteschlange per Zufall/Seed. */
+      passengerOrderHint: "randomize",
+      run: random,
+    },
+    backToFront: {
+      key: "backToFront",
+      label: "Back-to-Front",
+      type: "normal",
+      /** Sortierung nach Sitz; Passagierreihenfolge nur bei Gleichstand/Gruppen. */
+      passengerOrderHint: "tiebreak",
+      run: backToFront,
+    },
     windowMiddleAisle: {
       key: "windowMiddleAisle",
       label: "Window-Middle-Aisle (zoned)",
       type: "normal",
+      passengerOrderHint: "tiebreak",
       run: windowMiddleAisle,
     },
     steffenDeterministic: {
       key: "steffenDeterministic",
       label: "Steffen (deterministic)",
       type: "normal",
+      passengerOrderHint: "tiebreak",
       run: steffenDeterministic,
     },
-    prototypeCluster: { key: "prototypeCluster", label: "Prototype Cluster", type: "normal", run: prototypeCluster },
+    prototypeCluster: {
+      key: "prototypeCluster",
+      label: "Prototype Cluster",
+      type: "normal",
+      passengerOrderHint: "tiebreak",
+      run: prototypeCluster,
+    },
     rowBinInterleave: {
       key: "rowBinInterleave",
       label: "Row-bin interleave",
       type: "normal",
+      passengerOrderHint: "tiebreak",
       run: rowBinInterleave,
     },
-    heuristicCluster: { key: "heuristicCluster", label: "Heuristic Cluster", type: "optimized", run: heuristicCluster },
-    exactAStar: { key: "exactAStar", label: "Exact A*", type: "optimized", run: exactAStar },
-    boundedAStar: { key: "boundedAStar", label: "Bounded A*", type: "optimized", run: boundedAStar },
+    heuristicCluster: {
+      key: "heuristicCluster",
+      label: "Heuristic Cluster",
+      type: "optimized",
+      /** Reihenfolge wird heuristisch festgelegt/optimiert. */
+      passengerOrderHint: "optimize",
+      run: heuristicCluster,
+    },
+    exactAStar: {
+      key: "exactAStar",
+      label: "Exact A* (cost model)",
+      type: "optimized",
+      passengerOrderHint: "optimize",
+      run: exactAStar,
+    },
+    boundedAStar: {
+      key: "boundedAStar",
+      label: "Bounded A* (cost model)",
+      type: "optimized",
+      passengerOrderHint: "optimize",
+      run: boundedAStar,
+    },
     tickSearch: {
       key: "tickSearch",
       label: "Tick Search (sampled)",
       type: "optimized",
+      passengerOrderHint: "optimize",
       run: tickSearch,
     },
   };
