@@ -5,20 +5,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AeroBoard Simulation</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="responsive-plane.css">
 </head>
 <body>
   <main class="layout">
-    <section class="panel controls">
-      <h1>AeroBoard</h1>
-      <p class="subtitle">Flugzeug-Boarding-Simulation (Top-Down)</p>
+    <aside class="panel controls sidebar card card--secondary">
+      <header class="app-header">
+        <h1>AeroBoard</h1>
+        <p class="subtitle">Flugzeug-Boarding-Simulation (Top-Down)</p>
+      </header>
 
-      <section class="group-panel">
-        <h2>Einzelsimulation</h2>
+      <div class="segmented-control sidebar-segmented sidebar-mode-switch" role="tablist" aria-label="Steuerungsmodus">
+        <button type="button" class="sidebar-mode-btn is-active" role="tab" aria-selected="true" aria-controls="sidebarPanelSingle" id="sidebarModeSingle" data-sidebar-mode="single">Einzel&shy;simulation</button>
+        <button type="button" class="sidebar-mode-btn" role="tab" aria-selected="false" aria-controls="sidebarPanelComparison" id="sidebarModeComparison" data-sidebar-mode="comparison">Vergleich</button>
+        <button type="button" class="sidebar-mode-btn" role="tab" aria-selected="false" aria-controls="sidebarPanelBatch" id="sidebarModeBatch" data-sidebar-mode="batch">Batch</button>
+      </div>
+
+      <div class="sidebar-mode-panel is-active" id="sidebarPanelSingle" role="tabpanel" aria-labelledby="sidebarModeSingle" data-sidebar-mode="single">
         <div class="controls-grid">
           <div class="control-field">
             <label for="algorithmSelect">Boarding-Algorithmus</label>
             <select id="algorithmSelect"></select>
           </div>
+
+          <p class="algorithm-order-legend" role="note">
+            <strong>Passagierreihenfolge:</strong>
+            <span class="algo-order-tag algo-order-tag--randomize" title="Die Boarding-Warteschlange wird zufaellig aus der Passagiermenge gebildet (RNG/Seed). Die Reihenfolge beim Erzeugen der Passagierliste spielt keine Rolle.">Zufall</span> zufaellige Warteschlange (Seed),
+            <span class="algo-order-tag algo-order-tag--tiebreak" title="Die Warteschlange folgt festen Sitz-/Zonen-Regeln. Die Passagierreihenfolge im Blueprint wirkt nur bei Gleichstaenden der Sortierkeys oder wenn Gruppen (groupId) zusammen bleiben.">Gleichstand</span> nur bei gleichen Prioritaeten oder Gruppen (<code>groupId</code>),
+            <span class="algo-order-tag algo-order-tag--optimize" title="Das Verfahren sucht oder optimiert eine Boarding-Reihenfolge; die Reihenfolge ist Kern des Modells, nicht die urspruengliche Eingangsreihenfolge.">Optimierung</span> Reihenfolge wird gesucht.
+          </p>
 
           <div class="algorithm-groups">
             <div class="algorithm-card">
@@ -27,6 +42,9 @@
             </div>
             <div class="algorithm-card">
               <h3>Optimierte Verfahren</h3>
+              <p class="group-note optimized-honesty-note">
+                Cost-model algorithms optimize weighted surrogate costs. Observed ticks are measured by the simulation afterward.
+              </p>
               <div id="optimizedAlgorithmsList" class="algorithm-list-grid"></div>
             </div>
           </div>
@@ -40,24 +58,6 @@
             <label for="speedInput">Tick-Intervall (ms)</label>
             <input id="speedInput" type="number" min="1" max="2000" step="1" value="350">
           </div>
-
-          <div class="control-field control-field-checkbox">
-            <label class="checkbox-row">
-              <input type="checkbox" id="enableProfilesCheckbox" checked>
-              <span>Passagierprofile aktivieren</span>
-            </label>
-            <p id="profilesStatus" class="profiles-status">Profile aktiv</p>
-          </div>
-
-          <div class="control-field control-field-checkbox">
-            <label class="checkbox-row">
-              <input type="checkbox" id="benchmarkModeCheckbox">
-              <span>Benchmark-Modus: fixe Standardzeiten</span>
-            </label>
-            <p class="profiles-status">
-              Fixiert Standard-Passagiere auf gleiche stowTime, um Algorithmen isoliert zu vergleichen.
-            </p>
-          </div>
         </div>
 
         <div class="button-row">
@@ -67,18 +67,57 @@
           <button id="resetButton">Reset</button>
         </div>
 
-        <div class="stats">
-          <p><strong>Tick:</strong> <span id="tickStat">0</span></p>
-          <p><strong>Wartend:</strong> <span id="waitingStat">0</span></p>
-          <p><strong>Im Gang:</strong> <span id="aisleStat">0</span></p>
-          <p><strong>Sitzend:</strong> <span id="seatedStat">0</span></p>
-          <p><strong>Aktiver Algorithmus:</strong> <span id="algorithmStat">-</span></p>
+        <div class="stats stats-grid">
+          <p><strong>Tick:</strong> <span id="tickStat" data-live-stat="tick">0</span></p>
+          <p><strong>Wartend:</strong> <span id="waitingStat" data-live-stat="waiting">0</span></p>
+          <p><strong>Im Gang:</strong> <span id="aisleStat" data-live-stat="aisle">0</span></p>
+          <p><strong>Sitzend:</strong> <span id="seatedStat" data-live-stat="seated">0</span></p>
+          <p class="stats-span-full"><strong>Aktiver Algorithmus:</strong> <span id="algorithmStat" data-live-stat="algorithm">-</span></p>
         </div>
-      </section>
+      </div>
 
-      <section class="group-panel">
-        <h2>Vergleichsmodus</h2>
+      <details class="control-details sidebar-advanced">
+        <summary class="control-details-summary">Erweitert (Seed, Benchmark, Profile)</summary>
+        <div class="control-details-body">
+          <div class="controls-grid">
+            <div class="control-field">
+              <label for="seedInput">Seed</label>
+              <input id="seedInput" type="text" inputmode="numeric" value="12345" autocomplete="off">
+            </div>
+            <div class="control-field control-field-seed-actions">
+              <button type="button" id="newSeedButton">Neuer Seed</button>
+              <p class="active-seed-line"><strong>Aktiver Seed:</strong> <span id="activeSeedDisplay">12345</span></p>
+            </div>
+
+            <div class="control-field control-field-checkbox">
+              <label class="checkbox-row">
+                <input type="checkbox" id="enableProfilesCheckbox" checked>
+                <span>Passagierprofile aktivieren</span>
+              </label>
+              <p id="profilesStatus" class="profiles-status">Profile aktiv</p>
+            </div>
+
+            <div class="control-field control-field-checkbox">
+              <label class="checkbox-row">
+                <input type="checkbox" id="benchmarkModeCheckbox">
+                <span>Benchmark-Modus: fixe Standardzeiten</span>
+              </label>
+              <p class="profiles-status">
+                Fixiert Standard-Passagiere auf gleiche stowTime, um Algorithmen isoliert zu vergleichen.
+              </p>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <div class="sidebar-mode-panel" id="sidebarPanelComparison" role="tabpanel" aria-labelledby="sidebarModeComparison" data-sidebar-mode="comparison">
         <p class="group-note">Mehrere Algorithmen auf identischer Passagier-Basis vergleichen.</p>
+        <p class="algorithm-order-legend" role="note">
+          <strong>Passagierreihenfolge:</strong>
+          <span class="algo-order-tag algo-order-tag--randomize" title="Die Boarding-Warteschlange wird zufaellig aus der Passagiermenge gebildet (RNG/Seed). Die Reihenfolge beim Erzeugen der Passagierliste spielt keine Rolle.">Zufall</span>,
+          <span class="algo-order-tag algo-order-tag--tiebreak" title="Die Warteschlange folgt festen Sitz-/Zonen-Regeln. Die Passagierreihenfolge im Blueprint wirkt nur bei Gleichstaenden der Sortierkeys oder wenn Gruppen (groupId) zusammen bleiben.">Gleichstand</span>,
+          <span class="algo-order-tag algo-order-tag--optimize" title="Das Verfahren sucht oder optimiert eine Boarding-Reihenfolge; die Reihenfolge ist Kern des Modells, nicht die urspruengliche Eingangsreihenfolge.">Optimierung</span> — siehe Tooltip.
+        </p>
         <div class="algorithm-groups">
           <div class="algorithm-card">
             <h3>Normale Verfahren</h3>
@@ -86,94 +125,252 @@
           </div>
           <div class="algorithm-card">
             <h3>Optimierte Verfahren</h3>
+            <p class="group-note optimized-honesty-note">
+              Cost-model algorithms optimize weighted surrogate costs. Observed ticks are measured by the simulation afterward.
+            </p>
             <div id="comparisonOptimizedList" class="algorithm-checkbox-grid"></div>
           </div>
-        </div>
-        <div class="control-field">
-          <label for="batchRunCountInput">Batch runs</label>
-          <input id="batchRunCountInput" type="number" min="1" max="200" value="20">
         </div>
         <div class="button-row">
           <button id="comparisonStartButton">Vergleich starten</button>
           <button id="comparisonResetButton">Vergleich zuruecksetzen</button>
         </div>
+      </div>
+
+      <div class="sidebar-mode-panel" id="sidebarPanelBatch" role="tabpanel" aria-labelledby="sidebarModeBatch" data-sidebar-mode="batch">
+        <div class="control-field">
+          <label for="batchRunCountInput">Batch runs</label>
+          <input id="batchRunCountInput" type="number" min="1" max="200" value="20">
+        </div>
+        <p class="group-note batch-mode-hint">Algorithmen im Modus „Vergleich“ auswaehlen; Batch nutzt dieselbe Auswahl.</p>
         <div class="button-row">
           <button id="batchComparisonStartButton">Batch-Vergleich starten</button>
           <button id="batchComparisonCancelButton" type="button" disabled>Batch abbrechen</button>
+        </div>
+        <div class="button-row button-row-single">
           <button id="batchExportCsvButton" type="button">Batch CSV (Zwischenablage)</button>
         </div>
         <p id="batchComparisonProgress" class="batch-progress" aria-live="polite">—</p>
-      </section>
-    </section>
-
-    <section class="panel canvas-panel">
-      <div class="legend">
-        <span class="legend-dot waiting"></span> Wartend
-        <span class="legend-dot walking"></span> Walking
-        <span class="legend-dot stowing"></span> Stowing
-        <span class="legend-dot seating"></span> Seating
-        <span class="legend-dot seated"></span> Seated
       </div>
-      <p class="legend-note">Fuellfarbe = Cluster/Algorithmus, Randfarbe = Status.</p>
-      <canvas id="planeCanvas" width="1100" height="900" aria-label="Flugzeugansicht"></canvas>
+    </aside>
 
-      <section class="comparison-results">
-        <h2>Vergleichsergebnisse</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Algorithmus</th>
-              <th>Typ</th>
-              <th>Status</th>
-              <th>Ticks</th>
-              <th>Wartend</th>
-              <th>Im Gang</th>
-              <th>Sitzend</th>
-              <th>Fortschritt</th>
-              <th>Stow-Sum</th>
-              <th>Seat-Sum</th>
-              <th>Walk blk</th>
-              <th>Spawn blk</th>
-              <th>Max Gang</th>
-              <th>Avg Warte</th>
-            </tr>
-          </thead>
-          <tbody id="comparisonTableBody">
-            <tr>
-              <td colspan="15" class="empty-row">Noch kein Vergleich gestartet.</td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
+    <div class="main-column">
+      <div class="main-visual-row">
+        <section class="panel canvas-panel main-card card card--primary">
+          <div class="canvas-sim-toolbar" aria-label="Simulation und Legende">
+            <div class="canvas-sim-toolbar__row canvas-sim-toolbar__row--legend">
+              <div class="canvas-sim-legend-keys">
+                <p class="canvas-fill-key"><strong>Füllfarbe (Live):</strong> Cluster / Algorithmus</p>
+                <p class="canvas-border-key"><strong>Randfarbe:</strong> Status</p>
+              </div>
+              <div class="legend legend--inline" role="list">
+                <span class="legend-item" role="listitem"><span class="legend-dot waiting"></span> Wartend</span>
+                <span class="legend-item" role="listitem"><span class="legend-dot walking"></span> Gehend</span>
+                <span class="legend-item" role="listitem"><span class="legend-dot stowing"></span> Stowing</span>
+                <span class="legend-item" role="listitem"><span class="legend-dot seating"></span> Seating</span>
+                <span class="legend-item" role="listitem"><span class="legend-dot seated"></span> Sitzend</span>
+              </div>
+            </div>
+            <div class="canvas-sim-toolbar__row canvas-sim-toolbar__row--kpis">
+              <div class="canvas-kpi" title="Simulationstakt"><span class="canvas-kpi__lab">Tick</span> <span class="canvas-kpi__val" data-live-stat="tick">0</span></div>
+              <div class="canvas-kpi" title="Warteschlange"><span class="canvas-kpi__lab">Wartend</span> <span class="canvas-kpi__val" data-live-stat="waiting">0</span></div>
+              <div class="canvas-kpi" title="Im Gang inkl. Gang"><span class="canvas-kpi__lab">Im Gang</span> <span class="canvas-kpi__val" data-live-stat="aisle">0</span></div>
+              <div class="canvas-kpi" title="Bereits sitzend"><span class="canvas-kpi__lab">Sitzend</span> <span class="canvas-kpi__val" data-live-stat="seated">0</span></div>
+              <div class="canvas-kpi canvas-kpi--algo" title="Aktiver Algorithmus"><span class="canvas-kpi__lab">Algorithmus</span> <span class="canvas-kpi__val canvas-kpi__val--truncate" data-live-stat="algorithm">-</span></div>
+            </div>
+          </div>
+          <div class="canvas-frame">
+            <canvas id="planeCanvas" width="1200" height="1400" aria-label="Flugzeugansicht"></canvas>
+          </div>
+        </section>
 
-      <section class="comparison-results batch-comparison-results">
-        <h2>Batch-Vergleich (Statistik)</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Algorithm</th>
-              <th>Type</th>
-              <th>Runs</th>
-              <th>Mean Ticks</th>
-              <th>Std Dev</th>
-              <th>Min</th>
-              <th>Max</th>
-              <th>Wins</th>
-              <th>Win Rate</th>
-              <th>Mean Stow</th>
-              <th>Mean Seat</th>
-              <th>Mean Spawn blk</th>
-              <th>Mean Avg Warte</th>
-            </tr>
-          </thead>
-          <tbody id="batchComparisonTableBody">
-            <tr>
-              <td colspan="15" class="empty-row">Noch kein Batch-Vergleich gestartet.</td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
-    </section>
+        <section class="panel main-card algorithm-preview-section card card--primary" id="algorithmPreviewSection" aria-labelledby="algorithmPreviewHeading">
+          <h2 id="algorithmPreviewHeading" class="section-heading">Algorithmus-Vorschau</h2>
+          <p class="section-hint">Statische Vorschau der <strong>Start-Warteschlange</strong> und Sitzkarte — keine Live-Animation. Werte entsprechen einem Reset-Lauf mit aktuellem Seed und Passagierzahl.</p>
+          <div class="preview-algo-callout" role="region" aria-label="Kurzerklärung zum gewählten Vorschau-Algorithmus">
+            <div class="preview-algo-callout__marker" aria-hidden="true">i</div>
+            <div class="preview-algo-callout__body">
+              <h3 class="preview-algo-callout__title">So bildet der Algorithmus die Reihenfolge</h3>
+              <p class="preview-algo-callout__text algorithm-preview-explanation" id="algorithmPreviewExplanation" aria-live="polite"></p>
+            </div>
+          </div>
+          <div class="preview-toolbar">
+            <div class="control-field preview-field-inline">
+              <label for="previewAlgorithmSelect">Vorschau-Algorithmus</label>
+              <select id="previewAlgorithmSelect"></select>
+            </div>
+            <div class="preview-toolbar__modes">
+              <fieldset class="preview-mode-fieldset">
+                <legend class="visually-hidden">Darstellung</legend>
+                <label class="preview-radio">
+                  <input type="radio" name="previewDisplayMode" id="previewModeOrder" value="order" checked>
+                  <span>Reihenfolge-Nr.</span>
+                </label>
+                <label class="preview-radio">
+                  <input type="radio" name="previewDisplayMode" id="previewModePhase" value="phase">
+                  <span>Phase / Cluster</span>
+                </label>
+              </fieldset>
+              <p class="preview-mode-hint"><strong>Reihenfolge-Nr.:</strong> globaler Boarding-Rang in der Start-Schlange. <strong>Phase / Cluster:</strong> Kurzlabel pro Algorithmus-Gruppe (z.&nbsp;B. Zonen oder Steffen-Blöcke).</p>
+            </div>
+          </div>
+          <h3 class="preview-subheading">Boarding-Reihenfolge</h3>
+          <div class="preview-strip-scroll" id="algorithmPreviewStripScroll">
+            <div class="preview-strip" id="algorithmPreviewStrip"></div>
+          </div>
+          <h3 class="preview-subheading">Sitzkarte (Boarding-Rang)</h3>
+          <div class="preview-heatmap-legend" aria-hidden="true">
+            <span class="preview-heatmap-legend__label preview-heatmap-legend__label--early">früh (dunkel)</span>
+            <div class="preview-heatmap-legend__bar"></div>
+            <span class="preview-heatmap-legend__label preview-heatmap-legend__label--late">spät (hell)</span>
+          </div>
+          <div class="preview-cabin-wrap" id="algorithmPreviewCabinWrap">
+            <div class="preview-cabin preview-cabin-heatmap" id="algorithmPreviewCabin"></div>
+          </div>
+          <h3 class="preview-subheading visually-hidden">Phasen / Gruppen</h3>
+          <div class="preview-phases" id="algorithmPreviewPhases" aria-label="Phasen Legende"></div>
+        </section>
+      </div>
+
+      <div class="results-region panel main-card results-tabs-card card card--secondary">
+        <div class="results-tablist" role="tablist" aria-label="Ergebnisse">
+          <button type="button" class="results-tab is-active" role="tab" aria-selected="true" aria-controls="resultsPanelComparison" id="resultsTabComparison">Vergleichsergebnisse</button>
+          <button type="button" class="results-tab" role="tab" aria-selected="false" aria-controls="resultsPanelBatch" id="resultsTabBatch">Batch-Ergebnisse</button>
+          <button type="button" class="results-tab" role="tab" aria-selected="false" aria-controls="resultsPanelMetrics" id="resultsTabMetrics">Metriken</button>
+        </div>
+
+        <div class="results-tab-panel is-active" id="resultsPanelComparison" role="tabpanel" aria-labelledby="resultsTabComparison">
+          <div class="table-scroll">
+            <table class="data-table comparison-table compact">
+              <thead>
+                <tr>
+                  <th>Algorithmus</th>
+                  <th>Typ</th>
+                  <th>Status</th>
+                  <th class="col-num">Ticks</th>
+                  <th class="col-num">Wartend</th>
+                  <th class="col-num">Im Gang</th>
+                  <th class="col-num">Sitzend</th>
+                  <th class="col-num">Fortschritt</th>
+                  <th class="col-num">Stow-Sum</th>
+                  <th class="col-num">Seat-Sum</th>
+                  <th class="col-num">Walk blk</th>
+                  <th class="col-num">Spawn blk</th>
+                  <th class="col-num">Max Gang</th>
+                  <th class="col-num">Avg Warte</th>
+                </tr>
+              </thead>
+              <tbody id="comparisonTableBody">
+                <tr>
+                  <td colspan="14" class="empty-row">Noch kein Vergleich gestartet.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="results-tab-panel" id="resultsPanelBatch" role="tabpanel" aria-labelledby="resultsTabBatch">
+          <p class="section-hint batch-tab-hint">Sortiert nach Mean Ticks (aufsteigend); beste Zeile hervorgehoben.</p>
+          <div class="batch-kpi-row" id="batchKpiRow" aria-live="polite">
+            <div class="batch-kpi-card">
+              <span class="batch-kpi-label">Bester Algorithmus</span>
+              <span class="batch-kpi-value" id="batchKpiBestAlgo">—</span>
+            </div>
+            <div class="batch-kpi-card">
+              <span class="batch-kpi-label">Beste Mean Ticks</span>
+              <span class="batch-kpi-value" id="batchKpiBestMean">—</span>
+            </div>
+            <div class="batch-kpi-card">
+              <span class="batch-kpi-label">Bester normaler Algo</span>
+              <span class="batch-kpi-value" id="batchKpiBestNormal">—</span>
+            </div>
+            <div class="batch-kpi-card">
+              <span class="batch-kpi-label">Bester optimierter Algo</span>
+              <span class="batch-kpi-value" id="batchKpiBestOpt">—</span>
+            </div>
+            <div class="batch-kpi-card">
+              <span class="batch-kpi-label">Beste Win Rate</span>
+              <span class="batch-kpi-value" id="batchKpiBestWinRate">—</span>
+            </div>
+          </div>
+          <div class="batch-table-toolbar">
+            <button type="button" class="batch-advanced-toggle" id="batchAdvancedMetricsToggle" aria-expanded="false">
+              Erweiterte Metriken anzeigen
+            </button>
+          </div>
+          <div class="batch-table-region batch-metrics-simple" id="batchTableRegion">
+            <div class="table-scroll">
+              <table class="data-table batch-table compact" id="batchComparisonTable">
+                <thead>
+                  <tr>
+                    <th data-batch-sort="label">Algorithm</th>
+                    <th data-batch-sort="type">Type</th>
+                    <th class="col-num" data-batch-sort="runs">Runs</th>
+                    <th class="col-num batch-sort-default" data-batch-sort="meanTicks">Mean Ticks</th>
+                    <th class="col-num" data-batch-sort="stdTicks">Std Dev</th>
+                    <th class="col-num col-batch-advanced" data-batch-sort="minTicks">Min</th>
+                    <th class="col-num col-batch-advanced" data-batch-sort="maxTicks">Max</th>
+                    <th class="col-num col-batch-advanced" data-batch-sort="wins">Wins</th>
+                    <th class="col-num" data-batch-sort="winRate">Win Rate</th>
+                    <th class="col-num col-batch-advanced" data-batch-sort="meanStow">Mean Stow</th>
+                    <th class="col-num col-batch-advanced" data-batch-sort="meanSeat">Mean Seat</th>
+                    <th class="col-num col-batch-advanced" data-batch-sort="meanWalk">Mean Walk blk</th>
+                    <th class="col-num col-batch-advanced" data-batch-sort="meanSpawn">Mean Spawn blk</th>
+                    <th class="col-num col-batch-advanced" data-batch-sort="meanMaxAisle">Mean Max aisle</th>
+                    <th class="col-num" data-batch-sort="meanAvgWait">Mean Wait</th>
+                  </tr>
+                </thead>
+                <tbody id="batchComparisonTableBody">
+                  <tr>
+                    <td colspan="16" class="empty-row">Noch kein Batch-Vergleich gestartet.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="results-tab-panel" id="resultsPanelMetrics" role="tabpanel" aria-labelledby="resultsTabMetrics">
+          <div class="metrics-definitions">
+            <h3 class="metrics-def-heading">Kennzahlen (Kurz)</h3>
+            <dl class="metrics-dl">
+              <dt>Mean Ticks</dt>
+              <dd>Mittlere Simulationsdauer in Ticks ueber alle Batch-Laeufe (niedriger = schnelleres Boarding).</dd>
+              <dt>Std Dev</dt>
+              <dd>Streuung der Tick-Zahlen zwischen Laeufen.</dd>
+              <dt>Win Rate</dt>
+              <dd>Anteil der Laeufe, in denen ein Algorithmus die geringste Tick-Zahl hatte (bei Gleichstand zaehlen mehrere).</dd>
+              <dt>Mean Wait</dt>
+              <dd>Mittlere durchschnittliche Wartezeit in der Warteschlange (Ticks), aggregiert ueber den Lauf.</dd>
+            </dl>
+          </div>
+          <h3 class="section-heading metrics-table-heading">Vergleich: Abschluss-Metriken</h3>
+          <p class="section-hint">Erscheint, wenn ein Vergleich vollstaendig beendet ist.</p>
+          <div class="table-scroll">
+            <table class="data-table compact" id="comparisonMetricsTable">
+              <thead>
+                <tr>
+                  <th>Algorithmus</th>
+                  <th>Typ</th>
+                  <th class="col-num">Ticks</th>
+                  <th class="col-num">Stow-Sum</th>
+                  <th class="col-num">Seat-Sum</th>
+                  <th class="col-num">Walk blk</th>
+                  <th class="col-num">Spawn blk</th>
+                  <th class="col-num">Max Gang</th>
+                  <th class="col-num">Avg Warte</th>
+                </tr>
+              </thead>
+              <tbody id="comparisonMetricsTableBody">
+                <tr>
+                  <td colspan="9" class="empty-row">Noch keine abgeschlossenen Vergleichsmetriken.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
   </main>
 
   <script src="algorithms.js"></script>
